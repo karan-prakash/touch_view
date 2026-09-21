@@ -1,14 +1,14 @@
-# flake8: noqa
 from . import actions, gizmo, touch
+
+_registered = []
 
 
 def register():
-    actions.register()
-    touch.register()
-    gizmo.register()
+    for module in (actions, touch, gizmo):
+        module.register()
+        _registered.append(module)
 
 
 def unregister():
-    actions.unregister()
-    touch.unregister()
-    gizmo.unregister()
+    while _registered:
+        _registered.pop().unregister()

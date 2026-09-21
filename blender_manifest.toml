@@ -1,13 +1,13 @@
 schema_version = "1.0.0"
 
-id = "touchview"
-version = "4.2.1"
+id = "touch_view"
+version = "4.2.2"
 name = "Touch Viewport"
 tagline = "Creates active touch zones over View 2D and 3D areas"
-maintainer = "NENDO, Karan(b3dhub)"
+maintainer = "NENDO, Karan @b3dhub"
 type = "add-on"
 
-website = "https://github.com/nendotools/touchview"
+website = "https://github.com/b3dhub/touch_view"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/extensions/tags.html
@@ -23,15 +23,17 @@ files = "preserve settings when enabling/disabling the add-on"
 
 [build]
 paths_exclude_pattern = [
-    "__pycache__/",
-    "/.git/",
-    "docs/",
-    ".gitignore",
-    "/*.zip",
-    "/bin",
-    "settings.json",
-    "bundle.sh",
-    "mypy.ini",
-    "requirements.txt",
-    "README.md",
+  "__pycache__/",
+  "/.git/",
+  "/.agents/",
+  "/docs/",
+  ".gitignore",
+  "/*.zip",
+  "/tests",
+  "/AGENTS.md",
+  "/Makefile",
+  "/build.bat",
+  "/CHANGELOG.md",
+  "README.md",
+  "preferences.json",
 ]

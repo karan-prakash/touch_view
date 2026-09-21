@@ -8,12 +8,15 @@
 ###
 from . import gizmo_group_2d, panel
 
+_registered = []
+
 
 def register():
-    gizmo_group_2d.register()
-    panel.register()
+    for module in (gizmo_group_2d, panel):
+        module.register()
+        _registered.append(module)
 
 
 def unregister():
-    gizmo_group_2d.unregister()
-    panel.unregister()
+    while _registered:
+        _registered.pop().unregister()

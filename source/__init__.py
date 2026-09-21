@@ -1,13 +1,14 @@
 from . import ops, ui, utils
 
+_registered = []
+
 
 def register():
-    ops.register()
-    ui.register()
-    utils.register()
+    for module in (ops, ui, utils):
+        module.register()
+        _registered.append(module)
 
 
 def unregister():
-    ops.unregister()
-    ui.unregister()
-    utils.unregister()
+    while _registered:
+        _registered.pop().unregister()

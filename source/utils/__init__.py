@@ -6,7 +6,7 @@ ov = Overlay()
 
 def register():
     keymaps.register()
-    ov.drawUI()
+    ov.draw_ui()
 
 
 def unregister():

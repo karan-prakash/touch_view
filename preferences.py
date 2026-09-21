@@ -115,7 +115,7 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
         size=4,
     )
 
-    isVisible: BoolProperty(
+    show_overlay: BoolProperty(
         name="Show Overlay",
         default=False,
     )
@@ -139,12 +139,6 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
     enable_double_click: BoolProperty(
         name="Double Click",
         default=True,
-    )
-
-    double_click_mode: EnumProperty(
-        name="Double Click Mode",
-        items=double_click_items,
-        default="screen.screen_full_area",
     )
 
     enable_right_click: BoolProperty(
@@ -416,7 +410,7 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
             "enable_floating_toggle": self.enable_floating_toggle,
             "toggle_position": list(self.toggle_position),
             "toggle_color": list(self.toggle_color),
-            "is_visible": self.isVisible,
+            "show_overlay": self.show_overlay,
             "input_mode": self.input_mode,
             "enable_double_click": self.enable_double_click,
             "double_click_mode": self.double_click_mode,
@@ -467,10 +461,9 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
         self.enable_floating_toggle = data.get("enable_floating_toggle", False)
         self.toggle_position = data.get("toggle_position", (0, 0))
         self.toggle_color = data.get("toggle_color", (0.1, 0.1, 0.2, 0.5))
-        self.isVisible = data.get("is_visible", False)
+        self.show_overlay = data.get("show_overlay", data.get("is_visible", False))
         self.input_mode = data.get("input_mode", "FULL")
         self.enable_double_click = data.get("enable_double_click", True)
-        self.double_click_mode = data.get("double_click_mode", "screen.screen_full_area")
         self.enable_right_click = data.get("enable_right_click", True)
         self.right_click_mode = data.get("right_click_mode", "wm.window_fullscreen_toggle")
         self.right_click_source = data.get("right_click_source", "MOUSE")
@@ -507,9 +500,12 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
         self.show_float_menu = data.get("show_float_menu", False)
         self.floating_position = data.get("floating_position", (100, 0))
         self.double_click_mode = data.get("double_click_mode", "wm.window_fullscreen_toggle")
-        self.active_menu = data.get("active_menu", "VIEW3D")
+        self.active_menu = data.get("active_menu", "OBJECT")
         self.gizmo_tabs = data.get("gizmo_tabs", "GIZMO")
-        self.menu_sets = [TOUCHVIEW_PG_MenuModeGroup().from_dict(m) for m in data.get("menu_sets", [])]
+        while self.menu_sets:
+            self.menu_sets.remove(0)
+        for menu in data.get("menu_sets", []):
+            self.menu_sets.add().from_dict(menu)
 
     def load(self):
         filename = path.abspath(path.dirname(__file__) + "/preferences.json")
@@ -526,11 +522,12 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
 
     def save(self):
         filename = path.abspath(path.dirname(__file__) + "/preferences.json")
-        with open(filename, "w") as file:
-            json.dump(self.to_dict(), file)
-
-    def draw_v4(self, context):
-        pass
+        try:
+            with open(filename, "w") as file:
+                json.dump(self.to_dict(), file)
+        except (OSError, TypeError):
+            # a failed write must not abort add-on teardown
+            return None
 
     # set up addon preferences UI
     def draw(self, context):
@@ -560,7 +557,7 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
         col = col.column()
         col.prop(self, "header_toggle_position", expand=True)
         col = col.column(align=True)
-        col.prop(self, "isVisible", text="Show Overlay")
+        col.prop(self, "show_overlay", text="Show Overlay")
         col.prop(self, "swap_panrotate")
         col.prop(self, "use_multiple_colors")
         col = col.column()
@@ -618,40 +615,36 @@ class TOUCHVIEW_AP_OverlaySettings(AddonPreferences):
                 box.active = self.show_float_menu
                 col = box.column()
                 col.prop(self, "active_menu")
-                mList = self.getMenuSettings(self.active_menu)
-                for i in range(7):
-                    col.prop(mList, "menu_slot_" + str(i + 1))
+                menu_settings = self.get_menu_settings(self.active_menu)
+                for i in range(8):
+                    col.prop(menu_settings, "menu_slot_" + str(i + 1))
 
     ##
     # Data Accessors
     ##
-    def getMenuSettings(self, mode: str):
-        m = None
+    def get_menu_settings(self, mode: str):
+        menu = None
         for opts in self.menu_sets:
             if opts.mode == mode:
-                m = opts
-        if m is None:
-            m = self.menu_sets.add()
-            m.mode = mode
-            ops = menu_defaults[mode]
-            for i, o in enumerate(ops):
-                setattr(m, "menu_slot_" + str(i + 1), o)
-        return m
+                menu = opts
+        if menu is None:
+            menu = self.menu_sets.add()
+            menu.mode = mode
+            for i, operator in enumerate(menu_defaults.get(mode, ())):
+                setattr(menu, "menu_slot_" + str(i + 1), operator)
+        return menu
 
-    def getGizmoSet(self, mode: str | int):
+    def get_gizmo_set(self, mode: str | int):
         available = list(gizmo_sets["ALL"])
 
         if mode not in list(gizmo_sets):
             return available
         return available + list(gizmo_sets[mode])
 
-    def getShowLock(self):
-        return self.show_lock
-
-    def getWidth(self):
+    def get_width(self):
         return self.width / 100
 
-    def getRadius(self):
+    def get_radius(self):
         return self.radius / 100
 
 
@@ -668,7 +661,13 @@ def register():
 
 def unregister():
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            pass
 
-    bpy.types.NODE_HT_header.remove(NODE_HT_nendo_header)
-    bpy.types.IMAGE_HT_header.remove(NODE_HT_nendo_header)
+    for header in (bpy.types.NODE_HT_header, bpy.types.IMAGE_HT_header):
+        try:
+            header.remove(NODE_HT_nendo_header)
+        except (ValueError, RuntimeError):
+            pass

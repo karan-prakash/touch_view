@@ -20,14 +20,14 @@
 bl_info = {
     "name": "Touch Viewport",
     "description": "Creates active touch zones over View 2D and 3D areas for easier viewport navigation with touch screens and pen tablets.",
-    "author": "NENDO, Karan(b3dhub)",
-    "blender": (2, 93, 0),
-    "version": (4, 2, 1),
+    "author": "NENDO, Karan @b3dhub",
+    "blender": (3, 3, 0),
+    "version": (4, 2, 2),
     "category": "3D View",
     "location": "View3D > Tools > NENDO",
     "warning": "",
-    "doc_url": "https://github.com/nendotools/touchview",
-    "tracker_url": "https://github.com/nendotools/touchview/issues",
+    "doc_url": "https://github.com/b3dhub/touch_view",
+    "tracker_url": "https://github.com/b3dhub/touch_view/issues",
 }
 
 
@@ -37,12 +37,28 @@ from . import preferences, source
 
 
 def register():
-    source.register()
-    preferences.register()
-    bpy.context.preferences.addons[__package__].preferences.load()  # type: ignore
+    try:
+        source.register()
+        preferences.register()
+        bpy.context.preferences.addons[__package__].preferences.load()  # type: ignore
+        preferences.update_header_toggle_position(bpy.context)
+    except Exception:
+        unregister()
+        raise
 
 
 def unregister():
-    bpy.context.preferences.addons[__package__].preferences.save()  # type: ignore
-    source.unregister()
-    preferences.unregister()
+    addon = bpy.context.preferences.addons.get(__package__)
+    if addon is not None:
+        try:
+            addon.preferences.save()
+        except Exception:
+            pass
+    try:
+        source.unregister()
+    except Exception:
+        pass
+    try:
+        preferences.unregister()
+    except Exception:
+        pass

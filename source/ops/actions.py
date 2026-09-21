@@ -120,22 +120,19 @@ class TOUCHVIEW_OT_viewport_lock(Operator):
     bl_label = "Viewport rotation lock toggle"
     bl_idname = "touchview.viewport_lock"
 
-    region_ids = []
-
     def execute(self, context):
-        if not isinstance(context.area.spaces.active, bpy.types.SpaceView3D):
+        space = context.area.spaces.active
+        if not isinstance(space, bpy.types.SpaceView3D):
             return CANCEL
-        if len(context.area.spaces.active.region_quadviews) == 0:
+        if len(space.region_quadviews) == 0:
             context.region_data.lock_rotation ^= True
             return FINISHED
 
-        for region in context.area.spaces.active.region_quadviews:
-            self.region_ids.append((region.as_pointer(), region.lock_rotation))
+        regions = {region.as_pointer(): region.lock_rotation for region in space.region_quadviews}
 
         start_change = False
-        regions = dict(self.region_ids)
         for i in range(3, -1, -1):
-            region_data = context.area.spaces.active.region_quadviews[i]
+            region_data = space.region_quadviews[i]
             if context.region_data.as_pointer() == region_data.as_pointer():
                 start_change = True
                 context.region_data.lock_rotation ^= True
@@ -143,7 +140,6 @@ class TOUCHVIEW_OT_viewport_lock(Operator):
 
             if start_change:
                 region_data.lock_rotation = regions[region_data.as_pointer()]
-        self.region_ids = []
         return FINISHED
 
 
@@ -174,10 +170,10 @@ class TOUCHVIEW_OT_brush_resize(Operator):
             "WEIGHT_GPENCIL",
             "VERTEX_GPENCIL",
         ]:
-            return self.resize2d(context)
-        return self.resize3d(context)
+            return self.resize_2d(context)
+        return self.resize_3d(context)
 
-    def resize2d(self, context):
+    def resize_2d(self, context):
         data_path = "tool_settings.gpencil_paint.brush.size"
         if context.mode == "SCULPT_GPENCIL":
             data_path = "tool_settings.gpencil_sculpt_paint.brush.size"
@@ -191,7 +187,7 @@ class TOUCHVIEW_OT_brush_resize(Operator):
         )
         return FINISHED
 
-    def resize3d(self, context):
+    def resize_3d(self, context):
         data_path = "tool_settings.sculpt.brush.size"
         if context.mode == "PAINT_VERTEX":
             data_path = "tool_settings.vertex_paint.brush.size"
@@ -240,10 +236,10 @@ class TOUCHVIEW_OT_brush_strength(Operator):
             "WEIGHT_GPENCIL",
             "VERTEX_GPENCIL",
         ]:
-            return self.resize2d(context)
-        return self.resize3d(context)
+            return self.resize_2d(context)
+        return self.resize_3d(context)
 
-    def resize2d(self, context):
+    def resize_2d(self, context):
         data_path = "tool_settings.gpencil_paint.brush.gpencil_settings.pen_strength"
         if context.mode == "SCULPT_GPENCIL":
             data_path = "tool_settings.gpencil_sculpt_paint.brush.strength"
@@ -257,7 +253,7 @@ class TOUCHVIEW_OT_brush_strength(Operator):
         )
         return FINISHED
 
-    def resize3d(self, context):
+    def resize_3d(self, context):
         data_path = "tool_settings.sculpt.brush.strength"
         if context.mode == "PAINT_VERTEX":
             data_path = "tool_settings.vertex_paint.brush.strength"
@@ -319,7 +315,7 @@ class TOUCHVIEW_OT_decrease_multires(Operator):
             return CANCEL
         for mod in context.active_object.modifiers:
             if not isinstance(mod, bpy.types.MultiresModifier):
-                return FINISHED
+                continue
             if context.mode == "SCULPT":
                 if mod.sculpt_levels == 0:
                     bpy.ops.object.multires_unsubdivide(modifier=mod.name)
@@ -341,12 +337,12 @@ class TOUCHVIEW_OT_density_up(Operator):
     bl_idname = "touchview.density_up"
 
     def execute(self, context):
-        if not context.active_object:
+        if not context.active_object or context.active_object.type != "MESH":
             return CANCEL
         for mod in context.active_object.modifiers:
             if isinstance(mod, bpy.types.MultiresModifier):
                 return CANCEL
-        mesh = bpy.data.meshes[context.active_object.name]
+        mesh = context.active_object.data
         mesh.remesh_voxel_size *= 0.8
         bpy.ops.object.voxel_remesh()
         return FINISHED
@@ -359,12 +355,12 @@ class TOUCHVIEW_OT_density_down(Operator):
     bl_idname = "touchview.density_down"
 
     def execute(self, context):
-        if not context.active_object:
+        if not context.active_object or context.active_object.type != "MESH":
             return CANCEL
         for mod in context.active_object.modifiers:
             if isinstance(mod, bpy.types.MultiresModifier):
                 return CANCEL
-        mesh = bpy.data.meshes[context.active_object.name]
+        mesh = context.active_object.data
         mesh.remesh_voxel_size /= 0.8
         bpy.ops.object.voxel_remesh()
         return FINISHED

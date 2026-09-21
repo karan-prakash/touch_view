@@ -5,7 +5,7 @@ from ... import \
     __package__ as package  # relative import from the root directory
 
 
-def preferences() -> dict:
+def preferences() -> "bpy.types.AddonPreferences":
     """Get the addon preferences."""
     return bpy.context.preferences.addons[package].preferences  # type: ignore
 
@@ -31,11 +31,6 @@ def panel(type) -> tuple:
 
 def ui_scale() -> float:
     return bpy.context.preferences.system.ui_scale
-
-
-# used in text drawing
-def dpi() -> int:
-    return bpy.context.preferences.system.dpi
 
 
 # returns a tuple (bottom-left, top-right)
